@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Escalas</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .repos { background-color: #d3d3d3; }
+        .cp { background-color: #f4cccc; }
+        .total { background-color: #ffffcc; font-weight: bold; }
+        .header-cell { background-color: #ff6666; color: white; font-weight: bold; }
+        .time-cell { text-align: center; }
+        .alert-exceed { color: red; font-weight: bold; background-color: #ffcccc; }
+        .folga-cell { background-color: #dff0ff; color: blue; font-weight: bold; }
+        .entry-cell { background-color: #dff0d8; }
+        .exit-cell { background-color: #d9edf7; }
+        .lunch-cell { background-color: #fcf8e3; }
+        tr:hover { background-color: #f0f8ff; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Gerador de Escalas</h1>
+        <p class="text-center">Edite os horários diretamente na tabela abaixo. Use o menu suspenso para horários padrão.</p>
+        <div class="table-responsive">
+            <table class="table table-bordered text-center" id="scheduleTable">
+                <thead>
+                    <tr>
+                        <th class="header-cell">Colaborador</th>
+                        <th class="header-cell">Segunda-feira</th>
+                        <th class="header-cell">Terça-feira</th>
+                        <th class="header-cell">Quarta-feira</th>
+                        <th class="header-cell">Quinta-feira</th>
+                        <th class="header-cell">Sexta-feira</th>
+                        <th class="header-cell">Sábado</th>
+                        <th class="header-cell">Domingo</th>
+                        <th class="header-cell">Total Semanal</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Conteúdo dinâmico adicionado por JS -->
+                </tbody>
+            </table>
+        </div>
+        <button id="suggestAll" class="btn btn-secondary mt-3">Sugestão de Horários para Todos</button>
+    </div>
+
+    <script>
+        const collaborators = [
+            { name: "Luis Filipe (Responsável de Loja)", weeklyLimit: 40, isPartTime: false },
+            { name: "Elisamara", weeklyLimit: 40, isPartTime: false },
+            { name: "José Rafael", weeklyLimit: 40, isPartTime: false },
+            { name: "Mayara", weeklyLimit: 40, isPartTime: false },
+            { name: "Bárbara (35 horas)", weeklyLimit: 35, isPartTime: true },
+            { name: "Temporária", weeklyLimit: 40, isPartTime: false }
+        ];
+
+        const daysOfWeek = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
+
+        function generateTable() {
+            const tableBody = $("#tableBody");
+            collaborators.forEach((collaborator, index) => {
+                let row = `<tr data-collaborator="${index}" data-weekly-limit="${collaborator.weeklyLimit}" data-part-time="${collaborator.isPartTime}">`;
+                row += `<td>${collaborator.name}</td>`;
+
+                daysOfWeek.forEach((day, dayIndex) => {
+                    row += `
+                        <td class="time-cell">
+                            <input type="time" class="form-control entry-time" placeholder="Entrada">
+                            <input type="time" class="form-control exit-time mt-2" placeholder="Saída">
+                            <input type="time" class="form-control lunch-time mt-2" placeholder="Almoço">
+                        </td>
+                    `;
+                });
+
+                row += `<td class="total">00:00</td>`;
+                row += `</tr>`;
+                tableBody.append(row);
+            });
+        }
+
+        function parseTime(timeString) {
+            const [hours, minutes] = timeString.split(":").map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function calculateDailyTotal(row) {
+            let totalMinutes = 0;
+            $(row).find("td.time-cell").each(function () {
+                const entry = $(this).find(".entry-time").val();
+                const exit = $(this).find(".exit-time").val();
+
+                if (entry && exit) {
+                    const entryTime = parseTime(entry);
+                    const exitTime = parseTime(exit);
+
+                    if (exitTime > entryTime) {
+                        totalMinutes += exitTime - entryTime - 60; // Subtrai 1 hora para almoço
+                    }
+                }
+            });
+            return totalMinutes;
+        }
+
+        function calculateWeeklyTotals() {
+            $("#scheduleTable tbody tr").each(function () {
+                const weeklyLimit = $(this).data("weekly-limit") * 60;
+                const weeklyMinutes = calculateDailyTotal(this);
+                const weeklyHours = (weeklyMinutes / 60).toFixed(2);
+
+                $(this).find(".total").text(`${weeklyHours}h`);
+
+                if (weeklyMinutes > weeklyLimit) {
+                    $(this).find(".total").addClass("alert-exceed");
+                } else {
+                    $(this).find(".total").removeClass("alert-exceed");
+                }
+            });
+        }
+
+        function suggestScheduleForAll() {
+            const suggestedTimes = [
+                { entry: "09:00", exit: "18:00" },
+                { entry: "09:30", exit: "18:30" },
+                { entry: "14:15", exit: "23:15" }
+            ];
+
+            $("#scheduleTable tbody tr").each(function (index) {
+                $(this).find("td.time-cell").each(function (dayIndex) {
+                    if (dayIndex >= 5) { // Sábado e domingo são folgas
+                        $(this).html(`<div class="folga-cell">FOLGA</div>`);
+                    } else {
+                        const time = suggestedTimes[dayIndex % suggestedTimes.length];
+                        $(this).find(".entry-time").val(time.entry);
+                        $(this).find(".exit-time").val(time.exit);
+                    }
+                });
+            });
+
+            calculateWeeklyTotals();
+        }
+
+        $(document).ready(function () {
+            generateTable();
+
+            $("#scheduleTable").on("change", "input", calculateWeeklyTotals);
+
+            $("#suggestAll").on("click", suggestScheduleForAll);
+        });
+    </script>
+</body>
+</html>
