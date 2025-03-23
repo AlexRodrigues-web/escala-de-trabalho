@@ -27,6 +27,9 @@ Flask: Framework web para desenvolvimento em Python.
 
 Pandas: Biblioteca para manipulação e análise de dados.
 
+Status do Projeto
+🚧 Em desenvolvimento - O projeto está sendo estruturado e evoluirá com novas funcionalidades.
+
 Openpyxl: Biblioteca para leitura e escrita de arquivos Excel.
 
 Pyarrow: Biblioteca para manipulação de dados em formato de coluna.
